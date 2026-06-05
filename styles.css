@@ -1,0 +1,348 @@
+.side-notes-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  padding: 12px;
+}
+
+.side-notes-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding-bottom: 10px;
+}
+
+.side-notes-header-top {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.side-notes-title {
+  color: var(--text-normal);
+  font-weight: 600;
+}
+
+.side-notes-mode-badge {
+  align-items: center;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  color: var(--text-accent);
+  display: flex;
+  flex: 0 0 auto;
+  gap: 7px;
+  min-height: 40px;
+  padding: 5px 8px;
+}
+
+.side-notes-mode-icon {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+}
+
+.side-notes-mode-icon svg {
+  height: 26px;
+  width: 26px;
+}
+
+.side-notes-mode-label {
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.side-notes-meta {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  overflow-wrap: anywhere;
+}
+
+.side-notes-empty {
+  color: var(--text-muted);
+  line-height: 1.4;
+  padding: 8px 0;
+}
+
+.side-notes-composer,
+.side-notes-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.side-notes-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.side-notes-view-controls {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.side-notes-selection-controls {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+
+.side-notes-view-mode-select {
+  flex: 1 1 150px;
+  max-width: 100%;
+  min-height: var(--side-notes-button-size, 28px);
+}
+
+.side-notes-toolbar button,
+.side-notes-actions button,
+.side-notes-add,
+.side-notes-view-controls button {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+}
+
+.side-notes-actions button,
+.side-notes-view-controls button {
+  height: var(--side-notes-button-size, 28px);
+  padding: 4px;
+  width: var(--side-notes-button-size, 28px);
+}
+
+.side-notes-toolbar button {
+  min-height: var(--side-notes-button-size, 28px);
+  min-width: var(--side-notes-button-size, 28px);
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.side-notes-textarea {
+  box-sizing: border-box;
+  font: inherit;
+  font-family: var(--side-notes-note-font-family, inherit) !important;
+  font-size: var(--side-notes-editor-font-size, 16px) !important;
+  line-height: 1.5;
+  min-height: 90px;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  resize: vertical;
+  white-space: pre-wrap;
+  word-break: break-word;
+  width: 100%;
+}
+
+.side-notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  padding-bottom: 12px;
+}
+
+.side-notes-card {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.side-notes-card-cut {
+  opacity: 0.68;
+}
+
+.side-notes-card-select-row {
+  display: flex;
+  justify-content: flex-end;
+  min-height: 18px;
+}
+
+.side-notes-note-checkbox {
+  margin: 0;
+}
+
+.side-notes-group {
+  border-block-start: 1px solid var(--background-modifier-border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+}
+
+.side-notes-group-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.side-notes-group-header .side-notes-group-title {
+  flex: 1;
+}
+
+.side-notes-group-header button {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: var(--side-notes-button-size, 28px);
+  justify-content: center;
+  padding: 4px;
+  width: var(--side-notes-button-size, 28px);
+}
+
+.side-notes-group-title {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.side-notes-group-meta {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  line-height: 1.4;
+  max-height: 3.8em;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.side-notes-file-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.side-notes-file-actions button {
+  align-items: center;
+  display: inline-flex;
+  height: var(--side-notes-button-size, 28px);
+  justify-content: center;
+  padding: 4px;
+  width: var(--side-notes-button-size, 28px);
+}
+
+.side-notes-file-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.side-notes-file-header .side-notes-group-title {
+  flex: 1;
+}
+
+.side-notes-file-header button {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: var(--side-notes-button-size, 28px);
+  justify-content: center;
+  padding: 4px;
+  width: var(--side-notes-button-size, 28px);
+}
+
+.side-notes-orphaned-file {
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  box-shadow: 0 1px 0 var(--background-modifier-border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+}
+
+.side-notes-preview {
+  background: var(--background-secondary);
+  border-radius: 6px;
+  font-family: var(--side-notes-note-font-family, inherit);
+  font-size: var(--side-notes-preview-font-size, 16px);
+  line-height: 1.5;
+  min-height: 48px;
+  overflow-wrap: anywhere;
+  padding: 8px;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.side-notes-preview *,
+.side-notes-summary * {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.side-notes-preview pre,
+.side-notes-preview code {
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+
+.side-notes-summary {
+  background: var(--background-secondary);
+  border-radius: 6px;
+  font-family: var(--side-notes-note-font-family, inherit);
+  font-size: var(--side-notes-preview-font-size, 16px);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  padding: 8px;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.side-notes-preview :first-child {
+  margin-top: 0;
+}
+
+.side-notes-preview :last-child {
+  margin-bottom: 0;
+}
+
+.side-notes-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.side-notes-edit-actions {
+  align-items: center;
+  direction: rtl;
+  display: flex;
+  gap: 6px;
+  justify-content: space-between;
+}
+
+.side-notes-edit-actions button {
+  align-items: center;
+  display: inline-flex;
+  height: var(--side-notes-button-size, 28px);
+  justify-content: center;
+  padding: 4px;
+  width: var(--side-notes-button-size, 28px);
+}
+
+.side-notes-edit-save {
+  direction: ltr;
+  margin-inline-start: auto;
+}
+
+.side-notes-timestamp {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.side-notes-modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}

@@ -1,0 +1,7 @@
+node_modules/
+.npm-cache/
+main.js
+data.json
+_SideNotes/
+.obsidian/
+*.sidenotes
