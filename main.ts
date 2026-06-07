@@ -256,7 +256,7 @@ export default class SideNotesPlugin extends Plugin {
 
     this.addCommand({
       id: "open-paragraph-notes",
-      name: "Open paragraph notes sidebar",
+      name: "Open sidebar",
       callback: () => {
         void this.activateView();
       }
@@ -264,7 +264,7 @@ export default class SideNotesPlugin extends Plugin {
 
     this.addCommand({
       id: "import-sidenotes-bundle",
-      name: "Import .sidenotes bundle",
+      name: "Import transfer file",
       callback: () => {
         void this.importSideNotesBundleFromDisk();
       }
@@ -309,7 +309,7 @@ export default class SideNotesPlugin extends Plugin {
     );
 
     if (this.settings.updateOnSelectionChange) {
-      this.registerDomEvent(document, "selectionchange", () => {
+      this.registerDomEvent(activeDocument, "selectionchange", () => {
         this.debouncedRefresh();
       });
     }
@@ -321,15 +321,15 @@ export default class SideNotesPlugin extends Plugin {
     this.addSettingTab(new SideNotesSettingTab(this.app, this));
   }
 
-  async onunload() {
-    this.app.workspace.detachLeavesOfType(VIEW_TYPE_SIDE_NOTES);
+  onunload() {
+    // Keep the sidebar leaf in place so Obsidian preserves the user's layout.
   }
 
   async activateView() {
     const existingLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_SIDE_NOTES)[0];
 
     if (existingLeaf) {
-      this.app.workspace.revealLeaf(existingLeaf);
+      await this.app.workspace.revealLeaf(existingLeaf);
       this.refreshContext();
       return;
     }
@@ -341,7 +341,7 @@ export default class SideNotesPlugin extends Plugin {
     });
 
     if (leaf) {
-      this.app.workspace.revealLeaf(leaf);
+      await this.app.workspace.revealLeaf(leaf);
     }
 
     this.refreshContext();
@@ -951,7 +951,7 @@ export default class SideNotesPlugin extends Plugin {
   }
 
   async importSideNotesBundleFromDisk() {
-    const input = document.createElement("input");
+    const input = activeDocument.createElement("input");
     input.type = "file";
     input.accept = ".sidenotes";
 
@@ -1219,7 +1219,7 @@ export default class SideNotesPlugin extends Plugin {
 
     const leaf = this.lastMarkdownView?.leaf ?? this.app.workspace.getLeaf(true);
     await leaf.openFile(file);
-    this.app.workspace.revealLeaf(leaf);
+    await this.app.workspace.revealLeaf(leaf);
 
     const markdownView = leaf.view instanceof MarkdownView ? leaf.view : this.app.workspace.getActiveViewOfType(MarkdownView);
     if (!markdownView) {
@@ -1588,8 +1588,8 @@ export default class SideNotesPlugin extends Plugin {
       return activeMarkdownView;
     }
 
-    const activeView = this.app.workspace.activeLeaf?.view;
-    if (activeView instanceof SideNotesView && this.lastMarkdownView?.file) {
+    const activeSideNotesView = this.app.workspace.getActiveViewOfType(SideNotesView);
+    if (activeSideNotesView && this.lastMarkdownView?.file) {
       return this.lastMarkdownView;
     }
 
@@ -1904,10 +1904,12 @@ class SideNotesView extends ItemView {
     try {
       contentEl.empty();
       contentEl.addClass("side-notes-view");
-      contentEl.style.setProperty("--side-notes-note-font-family", getNoteFontFamilyCssValue(this.plugin.settings.noteFontFamily));
-      contentEl.style.setProperty("--side-notes-editor-font-size", `${this.plugin.settings.noteEditorFontSizePx}px`);
-      contentEl.style.setProperty("--side-notes-preview-font-size", `${this.plugin.settings.notePreviewFontSizePx}px`);
-      contentEl.style.setProperty("--side-notes-button-size", `${this.plugin.settings.buttonSizePx}px`);
+      contentEl.setCssProps({
+        "--side-notes-note-font-family": getNoteFontFamilyCssValue(this.plugin.settings.noteFontFamily),
+        "--side-notes-editor-font-size": `${this.plugin.settings.noteEditorFontSizePx}px`,
+        "--side-notes-preview-font-size": `${this.plugin.settings.notePreviewFontSizePx}px`,
+        "--side-notes-button-size": `${this.plugin.settings.buttonSizePx}px`
+      });
 
       const context = this.plugin.currentContext;
       const fileInfo = this.plugin.getCurrentFileInfo();
@@ -2071,7 +2073,7 @@ class SideNotesView extends ItemView {
         this.selectedNotes.clear();
         new Notice(`${deletedCount} note${deletedCount === 1 ? "" : "s"} deleted.`);
         void this.render();
-      }).setWarning();
+      }).setDestructive();
 
       addIconButton(selectionControlsEl, "scissors", `Cut ${this.selectedNotes.size} selected note${this.selectedNotes.size === 1 ? "" : "s"}`, () => {
         this.cutNotes = Array.from(this.selectedNotes.values());
@@ -2288,7 +2290,7 @@ class SideNotesView extends ItemView {
         }
 
         await this.plugin.deleteAllNotesForSideNoteId(orphanedFile.SideNoteID);
-      }).setWarning();
+      }).setDestructive();
       fileEl.createDiv({
         cls: "side-notes-group-meta",
         text: `SideNotesID: ${orphanedFile.SideNoteID}`
@@ -2375,7 +2377,7 @@ class SideNotesView extends ItemView {
         }
 
         await this.plugin.deleteAllNotesForSideNoteId(storedFile.SideNoteID, storedFile.orphaned);
-      }).setWarning();
+      }).setDestructive();
 
       fileEl.createDiv({
         cls: "side-notes-group-meta",
@@ -2471,7 +2473,7 @@ class SideNotesView extends ItemView {
     enableTextareaAutoResize(textarea);
     if (this.shouldFocusComposer) {
       this.shouldFocusComposer = false;
-      requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
         textarea.focus();
         textarea.selectionStart = textarea.value.length;
         textarea.selectionEnd = textarea.value.length;
@@ -2636,7 +2638,7 @@ class SideNotesView extends ItemView {
             }
           }
 
-          const activeElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          const activeElement = activeDocument.activeElement instanceof HTMLElement ? activeDocument.activeElement : null;
           if (activeElement) {
             activeElement.blur();
           }
@@ -2729,7 +2731,9 @@ class ConfirmModal extends Modal {
   onOpen() {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.createEl("h2", { text: "Confirm delete" });
+    new Setting(contentEl)
+      .setName("Confirm delete")
+      .setHeading();
     contentEl.createEl("p", { text: this.message });
 
     const actionsEl = contentEl.createDiv({ cls: "side-notes-modal-actions" });
@@ -2739,7 +2743,7 @@ class ConfirmModal extends Modal {
 
     new ButtonComponent(actionsEl)
       .setButtonText("Delete")
-      .setWarning()
+      .setDestructive()
       .onClick(() => this.finish(true));
   }
 
@@ -2778,7 +2782,9 @@ class SideNotesSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    containerEl.createEl("h2", { text: "Paragraph notes settings" });
+    new Setting(containerEl)
+      .setName("Paragraph notes settings")
+      .setHeading();
 
     new Setting(containerEl)
       .setName("Paragraph anchor storage")
@@ -3631,31 +3637,33 @@ function applyNoteDirection(element: HTMLElement, direction: "auto" | "rtl" | "l
   element.setAttribute("dir", direction);
 
   if (direction === "rtl") {
-    element.style.textAlign = "right";
+    element.setCssProps({ "text-align": "right" });
   } else if (direction === "ltr") {
-    element.style.textAlign = "left";
+    element.setCssProps({ "text-align": "left" });
   } else {
-    element.style.textAlign = "start";
+    element.setCssProps({ "text-align": "start" });
   }
 }
 
 function applyNoteEditorStyles(textarea: HTMLTextAreaElement, settings: SideNotesSettings) {
-  textarea.style.fontFamily = settings.noteFontFamily || "";
-  textarea.style.fontSize = `${settings.noteEditorFontSizePx}px`;
-  textarea.style.lineHeight = "1.5";
-  textarea.style.whiteSpace = "pre-wrap";
-  textarea.style.overflowWrap = "anywhere";
-  textarea.style.wordBreak = "break-word";
+  textarea.setCssProps({
+    "font-family": settings.noteFontFamily || "",
+    "font-size": `${settings.noteEditorFontSizePx}px`,
+    "line-height": "1.5",
+    "white-space": "pre-wrap",
+    "overflow-wrap": "anywhere",
+    "word-break": "break-word"
+  });
 }
 
 function enableTextareaAutoResize(textarea: HTMLTextAreaElement) {
   const resize = () => {
-    textarea.style.height = "auto";
-    textarea.style.height = `${textarea.scrollHeight}px`;
+    textarea.setCssProps({ height: "auto" });
+    textarea.setCssProps({ height: `${textarea.scrollHeight}px` });
   };
 
   textarea.addEventListener("input", resize);
-  requestAnimationFrame(resize);
+  window.requestAnimationFrame(resize);
 }
 
 function getNoteFontFamilyCssValue(fontFamily: string): string {

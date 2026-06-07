@@ -52,6 +52,8 @@ The plugin does not store your notes on an external server. Everything stays ins
 
 ## Installation
 
+Requires Obsidian `1.13.0` or newer.
+
 ### Manual Install
 
 Download or build the plugin files, then copy these files into:

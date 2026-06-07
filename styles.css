@@ -129,8 +129,8 @@
 .side-notes-textarea {
   box-sizing: border-box;
   font: inherit;
-  font-family: var(--side-notes-note-font-family, inherit) !important;
-  font-size: var(--side-notes-editor-font-size, 16px) !important;
+  font-family: var(--side-notes-note-font-family, inherit);
+  font-size: var(--side-notes-editor-font-size, 16px);
   line-height: 1.5;
   min-height: 90px;
   overflow-y: auto;
