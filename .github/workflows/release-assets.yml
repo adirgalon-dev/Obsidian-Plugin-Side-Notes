@@ -1,0 +1,71 @@
+name: Publish release assets
+
+on:
+  push:
+    tags:
+      - "0.2.0"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to update"
+        required: true
+        default: "0.2.0"
+
+permissions:
+  contents: write
+
+jobs:
+  publish-assets:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Resolve release tag
+        id: release
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check out release source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.release.outputs.tag }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build plugin
+        run: npm run build
+
+      - name: Update GitHub Release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          release_title="SideNotes ${RELEASE_TAG#v}"
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --title "$release_title" --notes "SideNotes ${RELEASE_TAG#v}"
+          else
+            gh release edit "$RELEASE_TAG" --title "$release_title"
+          fi
+
+          while IFS= read -r asset_name; do
+            case "$asset_name" in
+              main.js|manifest.json|styles.css) ;;
+              *) gh release delete-asset "$RELEASE_TAG" "$asset_name" --yes ;;
+            esac
+          done < <(gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name')
+
+          gh release upload "$RELEASE_TAG" main.js manifest.json styles.css --clobber
