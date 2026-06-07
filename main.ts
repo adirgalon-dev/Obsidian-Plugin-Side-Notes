@@ -348,12 +348,7 @@ export default class SideNotesPlugin extends Plugin {
   }
 
   async loadSettings() {
-    const loadedData = await this.loadData();
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
-    this.settings.noteEditorFontSizePx = loadedData?.noteEditorFontSizePx ?? this.settings.noteFontSizePx;
-    this.settings.notePreviewFontSizePx = loadedData?.notePreviewFontSizePx ?? this.settings.noteFontSizePx;
-    this.settings.buttonSizePx = loadedData?.buttonSizePx ?? DEFAULT_SETTINGS.buttonSizePx;
-    this.settings.anchorStorage = this.settings.anchorStorage === "block-id" ? "block-id" : "internal";
+    this.settings = getSideNotesSettingsFromPluginData(await this.loadData());
   }
 
   async saveSettings() {
@@ -368,9 +363,9 @@ export default class SideNotesPlugin extends Plugin {
       return;
     }
 
-    const legacyData = await this.loadData();
+    const legacyData = getPluginDataRecord(await this.loadData());
     this.sideNotesData = this.normalizeSideNotesData(Object.assign({}, DEFAULT_DATA, {
-      files: legacyData?.files ?? {}
+      files: getSideNotesFilesRecord(legacyData.files)
     }));
 
     if (Object.keys(this.sideNotesData.files).length > 0) {
@@ -384,9 +379,9 @@ export default class SideNotesPlugin extends Plugin {
   }
 
   getSideNoteIDFromProperties(file: TFile): string | null {
-    const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
-    const value = frontmatter?.[SIDE_NOTES_ID_PROPERTY] ?? frontmatter?.[LEGACY_SIDE_NOTE_ID_PROPERTY];
-    return typeof value === "string" && value.trim().length > 0 ? normalizeSideNotesId(value.trim()) : null;
+    const frontmatter: unknown = this.app.metadataCache.getFileCache(file)?.frontmatter;
+    const value = getFrontmatterStringValue(frontmatter, SIDE_NOTES_ID_PROPERTY) ?? getFrontmatterStringValue(frontmatter, LEGACY_SIDE_NOTE_ID_PROPERTY);
+    return value ? normalizeSideNotesId(value) : null;
   }
 
   isSideNotesIDInUse(sideNoteId: string): boolean {
@@ -424,13 +419,13 @@ export default class SideNotesPlugin extends Plugin {
       return;
     }
 
-    const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
-    const current = frontmatter?.[SIDE_NOTES_ID_PROPERTY];
+    const frontmatter: unknown = this.app.metadataCache.getFileCache(file)?.frontmatter;
+    const current = getFrontmatterStringValue(frontmatter, SIDE_NOTES_ID_PROPERTY);
     if (current === sideNoteId) {
       return;
     }
 
-    await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+    await this.app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
       frontmatter[SIDE_NOTES_ID_PROPERTY] = sideNoteId;
       delete frontmatter[LEGACY_SIDE_NOTE_ID_PROPERTY];
     });
@@ -455,18 +450,20 @@ export default class SideNotesPlugin extends Plugin {
     }
 
     for (const file of this.app.vault.getMarkdownFiles()) {
-      const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
-      const value = frontmatter?.[SIDE_NOTES_ID_PROPERTY] ?? frontmatter?.[LEGACY_SIDE_NOTE_ID_PROPERTY];
-      if (typeof value !== "string" || value.trim().length === 0) {
+      const frontmatter: unknown = this.app.metadataCache.getFileCache(file)?.frontmatter;
+      const sideNotesValue = getFrontmatterStringValue(frontmatter, SIDE_NOTES_ID_PROPERTY);
+      const legacyValue = getFrontmatterStringValue(frontmatter, LEGACY_SIDE_NOTE_ID_PROPERTY);
+      const value = sideNotesValue ?? legacyValue;
+      if (!value) {
         continue;
       }
 
       const normalizedValue = normalizeSideNotesId(value);
-      if (frontmatter?.[SIDE_NOTES_ID_PROPERTY] === normalizedValue && !frontmatter?.[LEGACY_SIDE_NOTE_ID_PROPERTY]) {
+      if (sideNotesValue === normalizedValue && !legacyValue) {
         continue;
       }
 
-      await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+      await this.app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
         frontmatter[SIDE_NOTES_ID_PROPERTY] = normalizedValue;
         delete frontmatter[LEGACY_SIDE_NOTE_ID_PROPERTY];
       });
@@ -3295,6 +3292,64 @@ function parseSideNotesTransferAttachments(value: unknown): SideNotesTransferAtt
   }
 
   return attachments;
+}
+
+function getSideNotesSettingsFromPluginData(rawData: unknown): SideNotesSettings {
+  const data = getPluginDataRecord(rawData);
+  const noteFontSizePx = getNumberValue(data.noteFontSizePx, DEFAULT_SETTINGS.noteFontSizePx);
+
+  return {
+    anchorStorage: data.anchorStorage === "block-id" ? "block-id" : "internal",
+    autoInsertBlockIds: getBooleanValue(data.autoInsertBlockIds, DEFAULT_SETTINGS.autoInsertBlockIds),
+    blockIdPrefix: getStringValue(data.blockIdPrefix, DEFAULT_SETTINGS.blockIdPrefix),
+    confirmBeforeDelete: getBooleanValue(data.confirmBeforeDelete, DEFAULT_SETTINGS.confirmBeforeDelete),
+    defaultNotesExpanded: getBooleanValue(data.defaultNotesExpanded, DEFAULT_SETTINGS.defaultNotesExpanded),
+    exportBlankLineBetweenNotes: getBooleanValue(data.exportBlankLineBetweenNotes, DEFAULT_SETTINGS.exportBlankLineBetweenNotes),
+    hidePluginBlockIds: getBooleanValue(data.hidePluginBlockIds, DEFAULT_SETTINGS.hidePluginBlockIds),
+    noteFontFamily: getStringValue(data.noteFontFamily, DEFAULT_SETTINGS.noteFontFamily),
+    noteFontSizePx,
+    noteEditorFontSizePx: getNumberValue(data.noteEditorFontSizePx, noteFontSizePx),
+    notePreviewFontSizePx: getNumberValue(data.notePreviewFontSizePx, noteFontSizePx),
+    buttonSizePx: getNumberValue(data.buttonSizePx, DEFAULT_SETTINGS.buttonSizePx),
+    noteDirection: getNoteDirectionValue(data.noteDirection, DEFAULT_SETTINGS.noteDirection),
+    showAllVaultNotesButton: getBooleanValue(data.showAllVaultNotesButton, DEFAULT_SETTINGS.showAllVaultNotesButton),
+    storeSideNoteIDInProperties: getBooleanValue(data.storeSideNoteIDInProperties, DEFAULT_SETTINGS.storeSideNoteIDInProperties),
+    updateOnSelectionChange: getBooleanValue(data.updateOnSelectionChange, DEFAULT_SETTINGS.updateOnSelectionChange),
+    updateDebounceMs: getNumberValue(data.updateDebounceMs, DEFAULT_SETTINGS.updateDebounceMs)
+  };
+}
+
+function getPluginDataRecord(rawData: unknown): Record<string, unknown> {
+  return isRecord(rawData) ? rawData : {};
+}
+
+function getSideNotesFilesRecord(value: unknown): Record<string, Record<string, BlockNotes>> {
+  return isRecord(value) ? value as Record<string, Record<string, BlockNotes>> : {};
+}
+
+function getFrontmatterStringValue(frontmatter: unknown, key: string): string | null {
+  if (!isRecord(frontmatter)) {
+    return null;
+  }
+
+  const value = frontmatter[key];
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function getBooleanValue(value: unknown, fallback: boolean): boolean {
+  return typeof value === "boolean" ? value : fallback;
+}
+
+function getNumberValue(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function getStringValue(value: unknown, fallback: string): string {
+  return typeof value === "string" ? value : fallback;
+}
+
+function getNoteDirectionValue(value: unknown, fallback: "auto" | "rtl" | "ltr"): "auto" | "rtl" | "ltr" {
+  return value === "auto" || value === "rtl" || value === "ltr" ? value : fallback;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
