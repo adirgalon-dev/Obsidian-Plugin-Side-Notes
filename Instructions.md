@@ -55,11 +55,11 @@ Open paragraph notes sidebar
 2. Place the cursor inside a paragraph.
 3. Open the notes sidebar.
 4. Write a note in the input area.
-5. Click `Add note`.
+5. Click `Add note`, or press `Shift+Enter` in the new-note editor.
 
 The note is saved and linked to the paragraph where the cursor was located.
 
-After the note is added, the new-note input area is cleared automatically.
+After the note is added, the new-note input area is cleared automatically and focus returns to it so you can keep writing.
 
 ## Where Notes Are Saved
 
@@ -104,6 +104,8 @@ Select-all buttons are available for the current view, and in all-file/all-vault
 
 When notes are selected, the toolbar also shows a trash button for deleting the selected notes in one action.
 
+Changing the sidebar view clears the current note selection, so selected notes from one view do not carry into another view.
+
 While editing an existing note, the cancel button appears on the right side, and the save button appears on the left side.
 
 The top of the sidebar includes a view dropdown for choosing:
@@ -128,9 +130,9 @@ The sidebar header also shows the current mode explicitly:
 - `All notes in vault`
 - `Orphaned notes`
 
-In Current paragraph mode and All notes in file mode, the export button creates a new Markdown file and opens it automatically.
+The export button creates a new Markdown file from the selected notes in the current view and opens it automatically. If no notes are selected in the current view, the plugin shows a message instead of creating a file.
 
-The setting `Blank line between exported notes` controls whether notes that belong to the same paragraph are separated by an empty line in the exported Markdown file. It is enabled by default.
+Selected-note exports are grouped by file name, `SideNotesID`, and `BlockID`. Notes inside the same `BlockID` group are separated by a blank line.
 
 The exported file name starts with:
 

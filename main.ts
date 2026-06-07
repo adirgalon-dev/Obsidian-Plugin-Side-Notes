@@ -1117,6 +1117,83 @@ export default class SideNotesPlugin extends Plugin {
     await this.app.workspace.getLeaf(true).openFile(createdFile);
   }
 
+  async exportSelectedNotesToFile(noteRefs: SideNoteReference[], viewMode: ViewMode) {
+    if (noteRefs.length === 0) {
+      new Notice("Select one or more side notes to export.");
+      return;
+    }
+
+    const files = this.getSelectedExportFiles(noteRefs);
+    if (files.length === 0) {
+      new Notice("Could not find the selected side notes to export.");
+      return;
+    }
+
+    const title = this.getSelectedExportTitle(viewMode, files);
+    const exportPath = await this.getAvailableExportPath(title);
+    const content = this.buildSelectedExportMarkdown(title, files);
+    const createdFile = await this.app.vault.create(exportPath, content);
+    await this.app.workspace.getLeaf(true).openFile(createdFile);
+  }
+
+  getSelectedExportFiles(noteRefs: SideNoteReference[]): StoredFileNoteSummary[] {
+    const files: StoredFileNoteSummary[] = [];
+    const filesBySideNoteId = new Map<string, StoredFileNoteSummary>();
+    const groupsByFile = new Map<string, Map<string, FileNoteGroup>>();
+
+    for (const noteRef of noteRefs) {
+      const storedFile = this.getStoredFileNotesFromSource(noteRef.sourcePath, noteRef.sourceSideNoteId);
+      const blockNotes = storedFile?.blocks[noteRef.blockId];
+      const note = blockNotes?.notes.find((item) => item.id === noteRef.noteId);
+      if (!storedFile || !blockNotes || !note) {
+        continue;
+      }
+
+      const sideNoteId = normalizeSideNotesId(storedFile.SideNoteID);
+      let exportFile = filesBySideNoteId.get(sideNoteId);
+      if (!exportFile) {
+        exportFile = {
+          SideNoteID: sideNoteId,
+          path: storedFile.path,
+          name: storedFile.name,
+          groups: [],
+          orphaned: !this.isStoredFileAttached(storedFile)
+        };
+        filesBySideNoteId.set(sideNoteId, exportFile);
+        groupsByFile.set(sideNoteId, new Map<string, FileNoteGroup>());
+        files.push(exportFile);
+      }
+
+      const fileGroups = groupsByFile.get(sideNoteId);
+      if (!fileGroups) {
+        continue;
+      }
+
+      let exportGroup = fileGroups.get(noteRef.blockId);
+      if (!exportGroup) {
+        exportGroup = {
+          blockId: noteRef.blockId,
+          notes: [],
+          fingerprint: blockNotes.fingerprint
+        };
+        fileGroups.set(noteRef.blockId, exportGroup);
+        exportFile.groups.push(exportGroup);
+      }
+
+      exportGroup.notes.push(note);
+    }
+
+    return files.filter((file) => file.groups.some((group) => group.notes.length > 0));
+  }
+
+  getSelectedExportTitle(viewMode: ViewMode, files: StoredFileNoteSummary[]): string {
+    if (files.length === 1) {
+      return `SideNotes selected (${files[0].SideNoteID}) (${files[0].name})`;
+    }
+
+    return `SideNotes selected (${getCurrentViewModeLabel(viewMode)}) ${getSafeTimestamp()}`;
+  }
+
   async openStoredFile(path: string) {
     const file = this.app.vault.getAbstractFileByPath(path);
     if (!(file instanceof TFile)) {
@@ -1237,16 +1314,43 @@ export default class SideNotesPlugin extends Plugin {
     return lines.join("\n");
   }
 
-  async addNoteForCurrentContext(text: string) {
+  buildSelectedExportMarkdown(title: string, files: StoredFileNoteSummary[]): string {
+    const lines = [
+      `# ${title}`,
+      ""
+    ];
+
+    for (const file of files) {
+      lines.push(
+        `## ${file.name}`,
+        `SideNotesID: ${file.SideNoteID}`,
+        file.orphaned ? `Old path: ${file.path}` : `Path: ${file.path}`,
+        ""
+      );
+
+      for (const group of file.groups) {
+        lines.push(`### BlockID: ^${group.blockId}`, "");
+
+        for (const note of group.notes) {
+          lines.push(note.text);
+          lines.push("");
+        }
+      }
+    }
+
+    return lines.join("\n");
+  }
+
+  async addNoteForCurrentContext(text: string, refreshViews = true): Promise<boolean> {
     const trimmedText = text.trim();
     if (!trimmedText) {
       new Notice("Write a note first.");
-      return;
+      return false;
     }
 
     const context = await this.ensureCurrentContextHasBlockId();
     if (!context?.blockId) {
-      return;
+      return false;
     }
 
     const notes = this.ensureBlockNotes(context.file, context.blockId, context.fingerprint, context.fromLine, context.toLine);
@@ -1260,7 +1364,10 @@ export default class SideNotesPlugin extends Plugin {
     });
 
     await this.savePluginState();
-    this.refreshViews();
+    if (refreshViews) {
+      this.refreshViews();
+    }
+    return true;
   }
 
   async updateNote(blockId: string, noteId: string, text: string, sourcePath?: string, sourceSideNoteId?: string) {
@@ -1766,6 +1873,7 @@ class SideNotesView extends ItemView {
   private vaultNoteIds: string[] = [];
   private vaultNoteRefs: SideNoteReference[] = [];
   private viewMode: ViewMode = "paragraph";
+  private shouldFocusComposer = false;
 
   constructor(leaf: WorkspaceLeaf, plugin: SideNotesPlugin) {
     super(leaf);
@@ -1990,10 +2098,9 @@ class SideNotesView extends ItemView {
       );
     }
 
-    if (this.viewMode === "paragraph" || this.viewMode === "file") {
-      const exportMode = this.viewMode;
+    if (selectableNoteRefs.length > 0) {
       addIconButton(controlsEl, "file-output", "Export notes to file", async () => {
-        await this.plugin.exportCurrentNotes(exportMode);
+        await this.plugin.exportSelectedNotesToFile(this.getSelectedNoteRefsForView(selectableNoteRefs), this.viewMode);
       });
     }
 
@@ -2049,6 +2156,7 @@ class SideNotesView extends ItemView {
         return;
       }
 
+      this.selectedNotes.clear();
       this.viewMode = selectedMode;
       void this.render();
     });
@@ -2096,6 +2204,10 @@ class SideNotesView extends ItemView {
     for (const noteRef of noteRefs) {
       this.selectedNotes.set(this.getNoteReferenceKey(noteRef), noteRef);
     }
+  }
+
+  private getSelectedNoteRefsForView(noteRefs: SideNoteReference[]): SideNoteReference[] {
+    return noteRefs.filter((noteRef) => this.selectedNotes.has(this.getNoteReferenceKey(noteRef)));
   }
 
   private async renderFileNotes(parent: HTMLElement, fileInfo: CurrentFileInfo | null, groups = this.plugin.getNoteGroupsForCurrentFile()) {
@@ -2357,8 +2469,26 @@ class SideNotesView extends ItemView {
     enableMarkdownListContinuation(textarea);
     textarea.value = this.draft;
     enableTextareaAutoResize(textarea);
+    if (this.shouldFocusComposer) {
+      this.shouldFocusComposer = false;
+      requestAnimationFrame(() => {
+        textarea.focus();
+        textarea.selectionStart = textarea.value.length;
+        textarea.selectionEnd = textarea.value.length;
+      });
+    }
+
     textarea.addEventListener("input", () => {
       this.draft = textarea.value;
+    });
+    textarea.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" || !event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) {
+        return;
+      }
+
+      event.preventDefault();
+      this.draft = textarea.value;
+      void this.addDraftNote();
     });
 
     this.renderToolbar(composerEl, textarea);
@@ -2366,11 +2496,19 @@ class SideNotesView extends ItemView {
     new ButtonComponent(composerEl)
       .setButtonText("Add note")
       .setCta()
-      .onClick(async () => {
-        await this.plugin.addNoteForCurrentContext(this.draft);
-        this.draft = "";
-        void this.render();
+      .onClick(() => {
+        void this.addDraftNote();
       });
+  }
+
+  private async addDraftNote() {
+    const noteAdded = await this.plugin.addNoteForCurrentContext(this.draft, false);
+    if (noteAdded) {
+      this.draft = "";
+    }
+
+    this.shouldFocusComposer = true;
+    void this.render();
   }
 
   private getNoteReference(sourcePath: string, blockId: string, note: SideNote, sourceSideNoteId?: string): SideNoteReference {
@@ -2735,7 +2873,7 @@ class SideNotesSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Blank line between exported notes")
-      .setDesc("When exporting, add an empty line between notes that belong to the same paragraph.")
+      .setDesc("When exporting, add an empty line between notes that belong to the same paragraph or BlockID.")
       .addToggle((toggle) => {
         toggle
           .setValue(this.plugin.settings.exportBlankLineBetweenNotes)

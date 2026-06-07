@@ -4,6 +4,16 @@ SideNotes is an Obsidian plugin for writing sidebar notes that stay connected to
 
 Instead of keeping comments in a separate file, SideNotes lets you attach small notes to the exact paragraph that matters. Move through your document, and the sidebar follows your cursor, showing only the notes that belong to the current paragraph. You can also switch to a file-wide view to review every note saved for the current file.
 
+## What's New in 0.2.0
+
+- Added selected-note export to Markdown. The export button now exports only the notes selected in the current view.
+- Selected exports work from the current paragraph view, current file view, orphaned notes view, and all-vault view.
+- Selected exports are grouped by file name, `SideNotesID`, and `BlockID`, with a blank line between notes in the same block.
+- Added `Shift+Enter` in the new-note editor to add a note quickly.
+- After adding a note, focus returns to the new-note editor so you can keep writing.
+- Switching between sidebar views now clears the current selection, preventing selected notes from one view from carrying into another.
+- Improved `.sidenotes` transfer behavior, including linked vault attachments, non-destructive imports, and duplicate `SideNotesID` protection.
+
 ## Features
 
 - Add notes to the paragraph under your cursor
