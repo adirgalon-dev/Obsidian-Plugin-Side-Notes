@@ -87,6 +87,14 @@ Do not publish your personal vault data with the plugin source.
 
 Files such as `_SideNotes/side-notes-data.json`, `.sidenotes` exports, `.obsidian`, and local plugin `data.json` may contain private information and should stay out of public repositories.
 
+## Disclosures
+
+- SideNotes does not use telemetry, analytics, ads, accounts, or external network services.
+- SideNotes stores its data locally inside your Obsidian vault.
+- When exporting `.sidenotes` files, the plugin reads linked non-Markdown vault attachments so they can be included in the transfer file.
+- The plugin may open the system Save As dialog when exporting transfer files.
+- The note font dropdown may request the local font list through the browser font access API when that API is available.
+
 ## Status
 
 This plugin is in active development. It is already usable, but please keep backups of important vaults when testing new versions.
